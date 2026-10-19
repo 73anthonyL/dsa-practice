@@ -8,11 +8,12 @@ My LeetCode solutions in Python 3, grouped by difficulty.
 
 ```
 leetcode-speedrun/
-├── easy/       # 21 Easy solutions, one file per problem
+├── easy/       # 28 Easy solutions, one file per problem
+├── medium/     # 3 Medium solutions, one file per problem
 └── README.md
 ```
 
-Each file is named after the problem title in PascalCase and uses LeetCode's `Solution` class format. Medium and hard folders will be added as I get to them.
+Each file is named after the problem title in PascalCase and uses LeetCode's `Solution` class format. A hard folder will be added as I get to it.
 
 ## Solutions
 
@@ -41,6 +42,21 @@ Each file is named after the problem title in PascalCase and uses LeetCode's `So
 | 108 | [Convert Sorted Array to Binary Search Tree](easy/ConvertSortedArrayToBinarySearchTree.py) | Tree, Divide and Conquer |
 | 110 | [Balanced Binary Tree](easy/BalancedBinaryTree.py) | Tree, DFS |
 | 111 | [Minimum Depth of Binary Tree](easy/MinimumDepthOfBinaryTree.py) | Tree, DFS/BFS |
+| 112 | [Path Sum](easy/PathSum.py) | Tree, DFS/BFS |
+| 118 | [Pascal's Triangle](easy/PascalsTriangle.py) | Array, Dynamic Programming |
+| 119 | [Pascal's Triangle II](easy/PascalsTriangle2.py) | Array, Dynamic Programming |
+| 121 | [Best Time to Buy and Sell Stock](easy/BestTimeToBuyAndSellStock.py) | Array, Dynamic Programming |
+| 125 | [Valid Palindrome](easy/ValidPalindrome.py) | Two Pointers, String |
+| 136 | [Single Number](easy/SingleNumber.py) | Array, Bit Manipulation |
+| 141 | [Linked List Cycle](easy/LinkedListCycle.py) | Hash Table, Linked List, Two Pointers |
+
+### Medium
+
+| # | Problem | Topic |
+|---|---------|-------|
+| 2 | [Add Two Numbers](medium/AddTwoNumbers.py) | Linked List, Math |
+| 3 | [Longest Substring Without Repeating Characters](medium/LongestSubstringWithoutRepeatingChar.py) | Hash Table, String, Sliding Window |
+| 7 | [Reverse Integer](medium/ReverseInteger.py) | Math |
 
 ## Running a solution
 
