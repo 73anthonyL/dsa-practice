@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+# Solutions are kept exactly as submitted to LeetCode, so they aren't linted
+# or reformatted.
+extend-exclude = ["solutions"]
+
+[tool.ruff.lint]
+extend-select = ["B", "I", "UP"]
