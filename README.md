@@ -1,6 +1,6 @@
 # Data Structures & Algorithms
 
-[![CI](https://github.com/73anthonyL/leetcode-speedrun/actions/workflows/ci.yml/badge.svg)](https://github.com/73anthonyL/leetcode-speedrun/actions/workflows/ci.yml)
+[![CI](https://github.com/73anthonyL/dsa-practice/actions/workflows/ci.yml/badge.svg)](https://github.com/73anthonyL/dsa-practice/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
 My Python solutions to LeetCode problems, organized by topic along the
