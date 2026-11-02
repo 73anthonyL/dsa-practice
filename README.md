@@ -3,9 +3,9 @@
 [![CI](https://github.com/73anthonyL/dsa-practice/actions/workflows/ci.yml/badge.svg)](https://github.com/73anthonyL/dsa-practice/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
-My Python solutions to LeetCode problems, organized by topic along the
+My LeetCode solutions, organized by topic along the
 [NeetCode roadmap](https://neetcode.io/roadmap). Solutions are kept exactly as
-submitted to LeetCode, and every one is tested against the problem's examples.
+submitted to LeetCode.
 
 ## Solutions
 
@@ -69,6 +69,7 @@ Space complexity excludes the output. `h` is the height of the tree.
 | 110 | [Balanced Binary Tree](https://leetcode.com/problems/balanced-binary-tree/) | Easy | [Python](solutions/trees/0110_balanced_binary_tree.py) | `O(n)` | `O(h)` |
 | 111 | [Minimum Depth of Binary Tree](https://leetcode.com/problems/minimum-depth-of-binary-tree/) | Easy | [Python](solutions/trees/0111_minimum_depth_of_binary_tree.py) | `O(n)` | `O(h)` |
 | 112 | [Path Sum](https://leetcode.com/problems/path-sum/) | Easy | [Python](solutions/trees/0112_path_sum.py) | `O(n)` | `O(h)` |
+| 404 | [Sum of Left Leaves](https://leetcode.com/problems/sum-of-left-leaves/) | Easy | [Python](solutions/trees/0404_sum_of_left_leaves.py) | `O(n)` | `O(h)` |
 
 ### Dynamic Programming
 
@@ -77,6 +78,7 @@ Space complexity excludes the output. `h` is the height of the tree.
 | 70 | [Climbing Stairs](https://leetcode.com/problems/climbing-stairs/) | Easy | [Python](solutions/dynamic-programming/0070_climbing_stairs.py) | `O(n)` | `O(n)` |
 | 118 | [Pascal's Triangle](https://leetcode.com/problems/pascals-triangle/) | Easy | [Python](solutions/dynamic-programming/0118_pascals_triangle.py) | `O(n^2)` | `O(1)` |
 | 119 | [Pascal's Triangle II](https://leetcode.com/problems/pascals-triangle-ii/) | Easy | [Python](solutions/dynamic-programming/0119_pascals_triangle_ii.py) | `O(n^2)` | `O(1)` |
+| 198 | [House Robber](https://leetcode.com/problems/house-robber/) | Medium | [C++](solutions/dynamic-programming/0198_house_robber.cpp) | `O(n)` | `O(n)` |
 
 ### Greedy
 
@@ -102,8 +104,10 @@ Space complexity excludes the output. `h` is the height of the tree.
 
 ```
 .
+├── workspace/   # solutions in progress; finished ones are moved to solutions/
 ├── solutions/   # one folder per topic, e.g. solutions/trees/0104_maximum_depth_of_binary_tree.py
-└── tests/       # pytest cases for every solution, one file per topic
+├── scripts/     # promote.py moves finished solutions out of workspace/
+└── tests/       # README checks, plus tests for some of the Python solutions
 ```
 
 ## Running the tests
@@ -121,14 +125,30 @@ don't need any changes to run locally.
 
 ## Adding a solution
 
-1. Paste the accepted submission, unchanged, into
-   `solutions/<topic>/<number>_<slug>.py`. Pad the number to four digits and
-   take the slug from the LeetCode URL, for example
-   `solutions/arrays-and-hashing/0217_contains_duplicate.py`. New topic folders
-   follow NeetCode's category names, such as `heap-priority-queue`,
-   `backtracking`, or `graphs`.
-2. Add a row for it to the matching table above.
-3. Add a `test_<number>_<slug>` test to `tests/test_<topic>.py`.
+1. Work on the problem in `workspace/`, under any file name, e.g.
+   `workspace/sum_left.py` or `workspace/house_robber.cpp`.
+2. Once LeetCode accepts it, add a header to the top of the file and push:
 
-CI fails if a solution is missing from the README, a row's link doesn't match
-its file name, or a solution has no test.
+   ```python
+   # leetcode: 404
+   # topic: trees
+   # time: O(n)
+   # space: O(h)
+   # done
+   ```
+
+   Use `//` instead of `#` in C++, Java, and similar languages. `topic` is the
+   folder under `solutions/`; new topics follow NeetCode's category names, such
+   as `heap-priority-queue`, `backtracking`, or `graphs`.
+
+The [Promote solutions](.github/workflows/promote.yml) workflow then removes
+the header, moves the rest of the file unchanged to
+`solutions/<topic>/<number>_<slug>.<ext>`, adds its README row (title and
+difficulty come from LeetCode), and commits it as `Add 0404 Sum of Left Leaves`.
+Run `git pull` afterwards to get that commit locally.
+
+To do the same locally instead, run `python scripts/promote.py` (add
+`--commit` to also commit). Files without `# done` are left alone.
+
+CI fails if a solution is missing from the README or a row's link doesn't match
+its file name.

@@ -1,0 +1,41 @@
+name: Promote solutions
+
+# Moves solutions marked "done" in workspace/ into solutions/, adds their
+# README rows, and commits the result back to main.
+on:
+  push:
+    branches: [main]
+    paths: ["workspace/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements-dev.txt
+      - name: Promote finished solutions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python scripts/promote.py --commit
+      # Pushes made by this workflow don't trigger CI, so check here first.
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest
+      - name: Push
+        run: |
+          git pull --rebase origin main
+          git push origin HEAD:main
