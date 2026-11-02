@@ -37,7 +37,7 @@ class TreeNode:
 
 def load_solution(number: int):
     """Return a fresh ``Solution`` for the given problem, wherever its file lives."""
-    paths = list(SOLUTIONS_DIR.glob(f"*/{number:04d}_*.py"))
+    paths = list(SOLUTIONS_DIR.glob(f"leetcode/*/{number:04d}_*.py"))
     if len(paths) != 1:
         raise LookupError(f"expected 1 file for problem {number}, found {len(paths)}")
     namespace = {"ListNode": ListNode, "TreeNode": TreeNode}

@@ -1,0 +1,4 @@
+-std=c++20
+-I../tests/cpp/include
+-include
+../tests/cpp/leetcode.h
