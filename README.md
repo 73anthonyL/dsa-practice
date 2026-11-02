@@ -102,6 +102,12 @@ Organized by topic along the [NeetCode roadmap](https://neetcode.io/roadmap).
 | 67 | [Add Binary](https://leetcode.com/problems/add-binary/) | Easy | [Python](solutions/leetcode/bit-manipulation/0067_add_binary.py) | `O(n)` | `O(n)` |
 | 136 | [Single Number](https://leetcode.com/problems/single-number/) | Easy | [Python](solutions/leetcode/bit-manipulation/0136_single_number.py) | `O(n)` | `O(1)` |
 
+## NeetCode
+
+| Problem | Solution | Time | Space |
+| --- | --- | --- | --- |
+| [Duplicate Integer](https://neetcode.io/problems/duplicate-integer/question?list=neetcode150) | [C++](solutions/neetcode/duplicate_integer.cpp) | `O(n)` | `O(n)` |
+
 ## Repository layout
 
 ```
