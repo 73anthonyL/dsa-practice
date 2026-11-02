@@ -98,7 +98,10 @@ def parse_header(path: Path) -> tuple[dict[str, str], bytes] | None:
 
     Returns None if the file isn't marked done yet.
     """
-    lines = path.read_bytes().splitlines(keepends=True)
+    data = path.read_bytes()
+    # Some editors start files with a byte order mark; keep it on the code.
+    bom = b"\xef\xbb\xbf" if data.startswith(b"\xef\xbb\xbf") else b""
+    lines = data[len(bom) :].splitlines(keepends=True)
     fields: dict[str, str] = {}
     i = 0
     while i < len(lines) and (match := HEADER_LINE.match(lines[i])):
@@ -108,7 +111,7 @@ def parse_header(path: Path) -> tuple[dict[str, str], bytes] | None:
         return None
     while i < len(lines) and not lines[i].strip():
         i += 1
-    return fields, b"".join(lines[i:])
+    return fields, bom + b"".join(lines[i:])
 
 
 def fetch_problem(number: int) -> tuple[str, str, str]:
@@ -125,7 +128,7 @@ def fetch_problem(number: int) -> tuple[str, str, str]:
             request = urllib.request.Request(url, data=body.encode(), headers=headers)
             with urllib.request.urlopen(request, timeout=30) as response:
                 text = response.read().decode()
-        except urllib.error.URLError:
+        except OSError:  # URLError, HTTPError, timeouts
             # Some Python installs (e.g. python.org's on macOS) ship without CA
             # certificates; curl uses the system's.
             header_args = [
@@ -235,6 +238,7 @@ def promote(src: Path, fields: dict[str, str], code: bytes, commit: bool) -> str
     original_readme, original_src = README.read_bytes(), src.read_bytes()
     readme = add_readme_row(original_readme.decode(), topic, number, row)
 
+    new_folder = not dst.parent.exists()
     try:
         dst.parent.mkdir(exist_ok=True)
         dst.write_bytes(code)
@@ -257,6 +261,8 @@ def promote(src: Path, fields: dict[str, str], code: bytes, commit: bool) -> str
         README.write_bytes(original_readme)
         src.write_bytes(original_src)
         dst.unlink(missing_ok=True)
+        if new_folder:
+            dst.parent.rmdir()
         detail = getattr(error, "stderr", "") or error
         raise PromoteError(f"couldn't promote, nothing changed ({detail})") from error
     return f"{rel_src} -> {rel_dst}"
@@ -282,16 +288,22 @@ def main() -> int:
 
     failed = promoted = 0
     for src in sorted(WORKSPACE.rglob("*")):
-        if not src.is_file() or src.suffix not in LANGUAGES:
+        if not src.is_file() or src.name.startswith("."):
             continue
         parsed = parse_header(src)
         if parsed is None:
             continue
         try:
+            if src.suffix not in LANGUAGES:
+                raise PromoteError(
+                    f"unsupported file type {src.suffix!r}; add it to LANGUAGES "
+                    "in scripts/promote.py"
+                )
             print(promote(src, *parsed, commit=args.commit))
             promoted += 1
-        except PromoteError as error:
-            print(f"{src.relative_to(ROOT)}: {error}", file=sys.stderr)
+        except Exception as error:  # noqa: BLE001 -- report it, go on to the next file
+            message = error if isinstance(error, PromoteError) else repr(error)
+            print(f"{src.relative_to(ROOT)}: {message}", file=sys.stderr)
             failed += 1
 
     if not promoted and not failed:

@@ -37,14 +37,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           python scripts/promote.py --commit
-      # Pushes made by this workflow don't trigger CI, so check here first.
+      - name: Catch up with main
+        run: git pull --rebase origin main
+      # Pushes made by this workflow don't trigger CI, so check exactly what
+      # is about to be pushed.
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest
       - name: Push
-        run: |
-          git pull --rebase origin main
-          git push origin HEAD:main
+        run: git push origin HEAD:main
       - name: Report files that couldn't be promoted
         if: steps.promote.outcome == 'failure'
         run: |
