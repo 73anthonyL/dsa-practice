@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.promote import LANGUAGES
 from tests.helpers import SOLUTIONS_DIR
 
 CPP_DIR = Path(__file__).resolve().parent / "cpp"
@@ -37,10 +38,13 @@ def _find_compiler():
 
 CXX = _find_compiler()
 
-CPP_SOLUTIONS = sorted(
-    path for suffix in ("*.cpp", "*.cc") for path in SOLUTIONS_DIR.rglob(suffix)
-)
-PY_SOLUTIONS = sorted(SOLUTIONS_DIR.rglob("*.py"))
+SOLUTIONS = [
+    path
+    for path in sorted(SOLUTIONS_DIR.rglob("*"))
+    if path.suffix in LANGUAGES and not path.name.startswith(".")
+]
+CPP_SOLUTIONS = [path for path in SOLUTIONS if LANGUAGES[path.suffix] == "C++"]
+PY_SOLUTIONS = [path for path in SOLUTIONS if LANGUAGES[path.suffix] == "Python"]
 
 
 def _id(path):

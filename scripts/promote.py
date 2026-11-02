@@ -30,6 +30,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import functools
 import html
 import json
 import re
@@ -141,7 +142,8 @@ class Problem:
 
     @property
     def stem(self) -> str:
-        return f"{self.key}_{self.name}" if self.key else self.name
+        # A title with no ASCII letters or digits gives an empty name.
+        return "_".join(part for part in (self.key, self.name) if part)
 
 
 def slugify(text: str, sep: str = "_") -> str:
@@ -177,7 +179,10 @@ def parse_header(path: Path) -> tuple[dict[str, str], bytes] | None:
 # --- Looking problems up -----------------------------------------------------
 
 
-def fetch(url: str, payload: dict | None = None) -> str:
+LOOKUP_HINT = "add a 'title:' line (and 'topic:' where needed) to skip the lookup"
+
+
+def fetch(url: str, payload: dict | None = None, hint: str = LOOKUP_HINT) -> str:
     """GET a page, or POST ``payload`` as JSON, and return the response body."""
     headers = {"User-Agent": "Mozilla/5.0", "Referer": url}
     body = None
@@ -189,7 +194,7 @@ def fetch(url: str, payload: dict | None = None) -> str:
             url, data=body.encode() if body else None, headers=headers
         )
         with urllib.request.urlopen(request, timeout=30) as response:
-            return response.read().decode()
+            return response.read().decode(errors="replace")
     except OSError:  # URLError, HTTPError, timeouts
         pass
     # Some Python installs (e.g. python.org's on macOS) ship without CA
@@ -200,15 +205,22 @@ def fetch(url: str, payload: dict | None = None) -> str:
     if body:
         args += ["-d", body]
     try:
-        return subprocess.run(
-            [*args, url], check=True, capture_output=True, text=True
-        ).stdout
+        result = subprocess.run([*args, url], check=True, capture_output=True)
+        return result.stdout.decode(errors="replace")
     except (OSError, subprocess.CalledProcessError) as error:
-        detail = (getattr(error, "stderr", "") or "").strip() or error
-        raise PromoteError(
-            f"couldn't load {url} ({detail}); add a 'title:' line (and 'topic:' "
-            "where needed) to skip the lookup"
-        ) from error
+        stderr = getattr(error, "stderr", b"") or b""
+        detail = stderr.decode(errors="replace").strip() or error
+        raise PromoteError(f"couldn't load {url} ({detail}); {hint}") from error
+
+
+def known(topic: str | None, choices: list[str]) -> str | None:
+    """Match a 'topic:' override to one of ``choices``, ignoring case and dashes."""
+    if not topic:
+        return None
+    for choice in choices:
+        if slugify(choice, "-") == slugify(topic, "-"):
+            return choice
+    raise PromoteError(f"unknown topic {topic!r}; use one of: {', '.join(choices)}")
 
 
 def first(pattern: str, text: str) -> str | None:
@@ -224,24 +236,31 @@ def leetcode(ref: str, fields: dict[str, str]) -> Problem:
             + ", ".join(TOPICS)
         )
     slug_match = re.search(r"leetcode\.(?:com|cn)/problems/([a-z0-9-]+)", ref)
-    if ref.isdigit() and all(fields.get(k) for k in ("title", "slug", "difficulty")):
-        number, title = int(ref), fields["title"]
-        slug, difficulty = fields["slug"], fields["difficulty"]
-    else:
+    number_text = next(
+        (n for n in (fields.get("leetcode", ""), ref) if n.isdigit()), ""
+    )
+    slug = slug_match[1] if slug_match else fields.get("slug", "")
+    title, difficulty = fields.get("title", ""), fields.get("difficulty", "")
+    if not (number_text and slug and title and difficulty):
         if slug_match:
             query = """query($slug: String!) { question(titleSlug: $slug) {
                 questionFrontendId title titleSlug difficulty } }"""
             variables = {"slug": slug_match[1]}
-        elif ref.isdigit():
+        elif number_text:
             query = """query($keywords: String) { questionList(categorySlug: "",
                 limit: 100, skip: 0, filters: {searchKeywords: $keywords}) {
                 data { questionFrontendId title titleSlug difficulty } } }"""
-            variables = {"keywords": ref}
+            variables = {"keywords": number_text}
         else:
             raise PromoteError(f"{ref!r} isn't a LeetCode problem URL or number")
         payload = {"query": query, "variables": variables}
+        hint = (
+            "add 'leetcode: <number>', 'title:' and 'difficulty:' lines (and "
+            "'slug:' if 'problem:' isn't the URL) to skip the lookup"
+        )
         try:
-            data = json.loads(fetch("https://leetcode.com/graphql", payload))["data"]
+            reply = fetch("https://leetcode.com/graphql", payload, hint)
+            data = json.loads(reply)["data"]
             questions = (
                 [data["question"]] if slug_match else data["questionList"]["data"]
             )
@@ -251,14 +270,17 @@ def leetcode(ref: str, fields: dict[str, str]) -> Problem:
             (
                 q
                 for q in questions
-                if q and (slug_match or q["questionFrontendId"] == ref)
+                if q and (slug_match or q["questionFrontendId"] == number_text)
             ),
             None,
         )
         if question is None:
             raise PromoteError(f"LeetCode has no problem {ref}")
-        number, title = int(question["questionFrontendId"]), question["title"]
-        slug, difficulty = question["titleSlug"], question["difficulty"]
+        number_text = question["questionFrontendId"]
+        slug = question["titleSlug"]
+        title = title or question["title"]
+        difficulty = difficulty or question["difficulty"]
+    number = int(number_text)
 
     difficulty = difficulty.capitalize()
     if difficulty not in ("Easy", "Medium", "Hard"):
@@ -280,6 +302,17 @@ def leetcode(ref: str, fields: dict[str, str]) -> Problem:
     )
 
 
+@functools.cache
+def codeforces_problems() -> dict[str, dict]:
+    """Every Codeforces problemset problem by id, e.g. "1352A" (fetched once)."""
+    try:
+        reply = json.loads(fetch("https://codeforces.com/api/problemset.problems"))
+        problems = reply["result"]["problems"]
+        return {f"{p['contestId']}{p['index']}": p for p in problems}
+    except (ValueError, KeyError, TypeError) as error:
+        raise PromoteError(f"unexpected reply from Codeforces ({error})") from None
+
+
 def codeforces(match: re.Match, fields: dict[str, str]) -> Problem:
     kind, contest, index = match[1], match[2], match[3].upper()
     gym = kind == "gym"
@@ -292,21 +325,12 @@ def codeforces(match: re.Match, fields: dict[str, str]) -> Problem:
     if not title:
         if gym:
             raise PromoteError("add a 'title:' line; gym problems can't be looked up")
-        try:
-            reply = json.loads(fetch("https://codeforces.com/api/problemset.problems"))
-            problems = reply["result"]["problems"]
-        except (ValueError, KeyError, TypeError) as error:
-            raise PromoteError(f"unexpected reply from Codeforces ({error})") from None
-        found = next(
-            (
-                p
-                for p in problems
-                if str(p["contestId"]) == contest and p["index"] == index
-            ),
-            None,
-        )
+        found = codeforces_problems().get(f"{contest}{index}")
         if found is None:
-            raise PromoteError(f"Codeforces has no problem {contest}{index}")
+            raise PromoteError(
+                f"{contest}{index} isn't in the Codeforces problemset yet; "
+                "add a 'title:' line"
+            )
         title, rating = found["name"], found.get("rating")
     return Problem(
         platform="Codeforces",
@@ -325,7 +349,7 @@ def codeforces(match: re.Match, fields: dict[str, str]) -> Problem:
 def cses(match: re.Match, fields: dict[str, str]) -> Problem:
     task = match[1]
     url = f"https://cses.fi/problemset/task/{task}"
-    title, category = fields.get("title"), fields.get("topic")
+    title, category = fields.get("title"), known(fields.get("topic"), CSES_CATEGORIES)
     if not (title and category):
         page = fetch(url)
         title = title or first(r"<h1>(.*?)</h1>", page)
@@ -346,7 +370,8 @@ def cses(match: re.Match, fields: dict[str, str]) -> Problem:
 def usaco(match: re.Match, fields: dict[str, str]) -> Problem:
     cpid = match[1]
     url = f"https://usaco.org/index.php?page=viewproblem2&cpid={cpid}"
-    title, division, contest = fields.get("title"), fields.get("topic"), "—"
+    title, contest = fields.get("title"), "—"
+    division = known(fields.get("topic"), USACO_DIVISIONS)
     if not (title and division):
         page = fetch(url)
         headings = re.findall(r"<h2>\s*(.*?)\s*</h2>", page, re.DOTALL)
@@ -397,15 +422,20 @@ def other_judge(ref: str, fields: dict[str, str]) -> Problem:
         platform = (parts[-2] if len(parts) > 1 else parts[0]).capitalize()
     if not platform:
         raise PromoteError("'problem:' should be the problem's URL")
+    if slugify(platform) in map(slugify, PLATFORMS):
+        raise PromoteError(f"for {platform}, set 'problem:' to the problem's URL")
     title = fields.get("title")
     if not title:
         raise PromoteError(f"add a 'title:' line; {platform} problems aren't looked up")
+    name = slugify(fields.get("slug") or title)
+    if not name:
+        raise PromoteError("add a 'slug:' line to name the file, e.g. 'slug: abc'")
     return Problem(
         platform=platform,
         section=None,
         folder=slugify(platform, "-"),
         key="",
-        name=slugify(title),
+        name=name,
         title=title,
         columns=[("Problem", link(title, url))],
     )
@@ -431,10 +461,9 @@ def identify(fields: dict[str, str]) -> Problem:
         return leetcode(ref, fields)
     for pattern, judge in JUDGES:
         if match := pattern.search(ref):
-            problem = judge(match, fields)
-            if fields.get("topic") and problem.platform not in SECTION_ORDER:
-                raise PromoteError(f"'topic:' isn't used for {problem.platform}")
-            return problem
+            if fields.get("topic") and judge not in (cses, usaco):
+                raise PromoteError("'topic:' isn't used for this judge")
+            return judge(match, fields)
     if fields.get("topic"):
         raise PromoteError("'topic:' isn't used for this judge")
     return other_judge(ref, fields)
@@ -470,24 +499,29 @@ def add_readme_row(readme: str, problem: Problem, header: list[str], row: str) -
     if README_END not in lines:
         raise PromoteError(f"README.md has no {README_END!r} heading")
 
-    # The platform's "## " section.
-    h2 = f"## {problem.platform}"
-    if h2 in lines:
-        start = lines.index(h2)
+    # The platform's "## " section; "kattis" and "Kattis" are the same one.
+    platform = problem.platform
+    sections = [
+        i
+        for i, line in enumerate(lines[: lines.index(README_END)])
+        if line.startswith("## ")
+    ]
+    same = [i for i in sections if slugify(lines[i][3:]) == slugify(platform)]
+    if same:
+        start = same[0]
     else:
-        platform = problem.platform
-        later = (
-            PLATFORMS[PLATFORMS.index(platform) + 1 :] if platform in PLATFORMS else []
-        )
-        start = next(
-            (
+        # Known judges keep their order; other judges go after all of them.
+        if platform in PLATFORMS:
+            later = PLATFORMS[PLATFORMS.index(platform) + 1 :]
+            after = [
                 i
-                for i, line in enumerate(lines)
-                if line.startswith("## ") and line[3:] in later
-            ),
-            lines.index(README_END),
-        )
-        lines[start:start] = [h2, ""]
+                for i in sections
+                if lines[i][3:] in later or lines[i][3:] not in PLATFORMS
+            ]
+        else:
+            after = []
+        start = after[0] if after else lines.index(README_END)
+        lines[start:start] = [f"## {platform}", ""]
     end = next_heading(lines, start, ("## ",))
 
     # The "### " subsection within it, if this platform has them.

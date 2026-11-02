@@ -162,11 +162,12 @@ clangd extension) the same setup, so pasted LeetCode C++ shows no errors.
    | CSES | `https://cses.fi/problemset/task/1068` | |
    | USACO | `https://usaco.org/index.php?page=viewproblem2&cpid=1059` | |
    | AtCoder | `https://atcoder.jp/contests/abc300/tasks/abc300_a` | |
-   | Anything else | its URL, or `platform: ICPC` if it has none | `title:` |
+   | Anything else | its URL, or `platform: ICPC` if it has none | `title:`, plus `slug:` (the file name) if the title has no English letters or digits |
 
    The title, difficulty or rating, and CSES category or USACO division are
-   looked up from the URL. A `title:` line (and `topic:` for CSES or USACO)
-   overrides the lookup, e.g. if the site can't be reached.
+   looked up from the URL. To skip the lookup, e.g. if the site can't be
+   reached, add a `title:` line, plus `topic:` for CSES or USACO, or
+   `leetcode: <number>` and `difficulty:` for LeetCode.
 
 The [Promote solutions](.github/workflows/promote.yml) workflow then removes
 the header, moves the rest of the file unchanged into `solutions/`, adds its
