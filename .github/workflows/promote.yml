@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   promote:
+    # It pushes to main, so never run it from another branch.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -27,6 +29,10 @@ jobs:
           python-version: "3.14"
       - run: pip install -r requirements-dev.txt
       - name: Promote finished solutions
+        id: promote
+        # Push whatever was promoted even if some files failed; the last step
+        # fails the job so the errors still show up.
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
@@ -39,3 +45,8 @@ jobs:
         run: |
           git pull --rebase origin main
           git push origin HEAD:main
+      - name: Report files that couldn't be promoted
+        if: steps.promote.outcome == 'failure'
+        run: |
+          echo "::error::Some workspace files couldn't be promoted; see the 'Promote finished solutions' step."
+          exit 1

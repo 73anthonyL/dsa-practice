@@ -8,7 +8,12 @@ import pytest
 from tests.helpers import SOLUTIONS_DIR
 
 ROOT = SOLUTIONS_DIR.parent
-SOLUTIONS = sorted(path for path in SOLUTIONS_DIR.glob("*/*") if path.is_file())
+# Skip dotfiles such as macOS's .DS_Store.
+SOLUTIONS = sorted(
+    path
+    for path in SOLUTIONS_DIR.glob("*/*")
+    if path.is_file() and not path.name.startswith(".")
+)
 
 # A README table row, e.g.
 # | 1 | [Two Sum](https://leetcode.com/problems/two-sum/) | Easy | [Python](solutions/...) |

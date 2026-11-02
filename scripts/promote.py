@@ -211,35 +211,54 @@ def promote(src: Path, fields: dict[str, str], code: bytes, commit: bool) -> str
         title, slug, difficulty = fields["title"], fields["slug"], fields["difficulty"]
     else:
         title, slug, difficulty = fetch_problem(number)
+    # Match what tests/test_repository.py accepts in a README row.
+    difficulty = difficulty.capitalize()
+    if difficulty not in ("Easy", "Medium", "Hard"):
+        raise PromoteError(f"difficulty {difficulty!r} isn't Easy, Medium or Hard")
+    if not re.fullmatch(r"[a-z0-9-]+", slug):
+        raise PromoteError(f"slug {slug!r} should look like 'sum-of-left-leaves'")
 
+    existing = sorted(SOLUTIONS.glob(f"*/{number:04d}_*{src.suffix}"))
+    if existing:
+        raise PromoteError(f"{existing[0].relative_to(ROOT)} already exists")
     dst = SOLUTIONS / topic / f"{number:04d}_{slug.replace('-', '_')}{src.suffix}"
     rel_src, rel_dst = (
         src.relative_to(ROOT).as_posix(),
         dst.relative_to(ROOT).as_posix(),
     )
-    if dst.exists():
-        raise PromoteError(f"{rel_dst} already exists")
 
     row = (
         f"| {number} | [{title}](https://leetcode.com/problems/{slug}/) "
         f"| {difficulty} | [{LANGUAGES[src.suffix]}]({rel_dst}) "
         f"| `{time}` | `{space}` |"
     )
-    readme = add_readme_row(README.read_bytes().decode(), topic, number, row)
+    original_readme, original_src = README.read_bytes(), src.read_bytes()
+    readme = add_readme_row(original_readme.decode(), topic, number, row)
 
-    dst.parent.mkdir(exist_ok=True)
-    dst.write_bytes(code)
-    README.write_bytes(readme.encode())
-    author = ""
-    if commit:
-        # Credit whoever last committed the workspace file, not the bot.
-        author = git("log", "-1", "--format=%an <%ae>", "--", rel_src)
-        git("rm", "-q", "--cached", "--ignore-unmatch", "--", rel_src)
-    src.unlink()
-    if commit:
-        git("add", "--", rel_dst, "README.md")
-        message = f"Add {number:04d} {title}"
-        git("commit", "-q", "-m", message, *(["--author", author] if author else []))
+    try:
+        dst.parent.mkdir(exist_ok=True)
+        dst.write_bytes(code)
+        README.write_bytes(readme.encode())
+        author = ""
+        if commit:
+            # Credit whoever last committed the workspace file, not the bot.
+            author = git("log", "-1", "--format=%an <%ae>", "--", rel_src)
+            git("rm", "-q", "--cached", "--ignore-unmatch", "--", rel_src)
+        src.unlink()
+        if commit:
+            git("add", "--", rel_dst, "README.md")
+            message = f"Add {number:04d} {title}"
+            author_args = ["--author", author] if author else []
+            git("commit", "-q", "-m", message, *author_args)
+    except (OSError, subprocess.CalledProcessError) as error:
+        # Put everything back so the file can simply be promoted again.
+        if commit:
+            subprocess.run(["git", "reset", "-q"], cwd=ROOT, check=False)
+        README.write_bytes(original_readme)
+        src.write_bytes(original_src)
+        dst.unlink(missing_ok=True)
+        detail = getattr(error, "stderr", "") or error
+        raise PromoteError(f"couldn't promote, nothing changed ({detail})") from error
     return f"{rel_src} -> {rel_dst}"
 
 
