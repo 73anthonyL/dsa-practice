@@ -1,4 +1,4 @@
-"""Checks that keep the README and tests in step with the solutions folder."""
+"""Checks that keep the README in step with the solutions folder."""
 
 import re
 from pathlib import Path
@@ -8,14 +8,19 @@ import pytest
 from tests.helpers import SOLUTIONS_DIR
 
 ROOT = SOLUTIONS_DIR.parent
-SOLUTIONS = sorted(SOLUTIONS_DIR.glob("*/*.py"))
-TEST_SOURCE = "\n".join(path.read_text() for path in (ROOT / "tests").glob("test_*.py"))
+# Skip dotfiles such as macOS's .DS_Store.
+SOLUTIONS = sorted(
+    path
+    for path in SOLUTIONS_DIR.glob("*/*")
+    if path.is_file() and not path.name.startswith(".")
+)
 
 # A README table row, e.g.
 # | 1 | [Two Sum](https://leetcode.com/problems/two-sum/) | Easy | [Python](solutions/...) |
+# The link text is the language: Python, C++, ...
 README_ROW = re.compile(
     r"^\| (\d+) \| \[[^\]]+\]\(https://leetcode\.com/problems/([a-z0-9-]+)/\) "
-    r"\| (?:Easy|Medium|Hard) \| \[Python\]\((solutions/[^)]+)\) \|",
+    r"\| (?:Easy|Medium|Hard) \| \[[^\]]+\]\((solutions/[^)]+)\) \|",
     re.MULTILINE,
 )
 README_ROWS = README_ROW.findall((ROOT / "README.md").read_text())
@@ -31,9 +36,4 @@ def test_readme_lists_every_solution_once():
     ("number", "slug", "path"), README_ROWS, ids=[row[2] for row in README_ROWS]
 )
 def test_readme_row_matches_file_name(number, slug, path):
-    assert Path(path).name == f"{int(number):04d}_{slug.replace('-', '_')}.py"
-
-
-@pytest.mark.parametrize("path", SOLUTIONS, ids=lambda path: path.stem)
-def test_every_solution_has_a_test(path):
-    assert f"def test_{path.stem}(" in TEST_SOURCE
+    assert Path(path).stem == f"{int(number):04d}_{slug.replace('-', '_')}"

@@ -105,3 +105,16 @@ def test_0111_minimum_depth_of_binary_tree(tree, expected):
 )
 def test_0112_path_sum(tree, target, expected):
     assert load_solution(112).hasPathSum(build_tree(tree), target) is expected
+
+
+@pytest.mark.parametrize(
+    ("tree", "expected"),
+    [
+        ([3, 9, 20, None, None, 15, 7], 24),
+        ([1], 0),
+        ([1, 2, 3, 4, 5], 4),
+        ([1, None, 2, 3], 3),
+    ],
+)
+def test_0404_sum_of_left_leaves(tree, expected):
+    assert load_solution(404).sumOfLeftLeaves(build_tree(tree)) == expected
