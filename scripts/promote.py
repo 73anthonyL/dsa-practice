@@ -5,7 +5,6 @@ problem and marks it done. Use ``//`` instead of ``#`` in C++, Java and other
 languages whose comments start that way:
 
     # problem: https://leetcode.com/problems/sum-of-left-leaves/
-    # topic: trees
     # time: O(n)
     # space: O(h)
     # done
@@ -13,11 +12,12 @@ languages whose comments start that way:
 ``problem`` is the problem's URL. For LeetCode, Codeforces, CSES, USACO and
 AtCoder the title, difficulty or rating, and CSES category or USACO division
 are looked up from it. LeetCode also accepts the problem number
-(``# leetcode: 404``) and needs a NeetCode ``topic``.
+(``# leetcode: 404``).
 
 Any other judge works too: give the problem's URL (or a ``platform:`` name if
 it has none) plus a ``title:`` line. ``title:`` and ``topic:`` also override
-what was looked up, for example when a site can't be reached.
+what was looked up (``topic:`` is the CSES category or USACO division), for
+example when a site can't be reached.
 
 Only the header lines, and blank lines right after them, are removed; the rest
 of the file is moved byte for byte.
@@ -48,28 +48,6 @@ README = ROOT / "README.md"
 # Platform sections in the README go before this heading.
 README_END = "## Repository layout"
 
-# NeetCode topic folder -> README heading, in the order the tables appear.
-TOPICS = {
-    "arrays-and-hashing": "Arrays & Hashing",
-    "two-pointers": "Two Pointers",
-    "sliding-window": "Sliding Window",
-    "stack": "Stack",
-    "binary-search": "Binary Search",
-    "linked-list": "Linked List",
-    "trees": "Trees",
-    "tries": "Tries",
-    "heap-priority-queue": "Heap / Priority Queue",
-    "backtracking": "Backtracking",
-    "graphs": "Graphs",
-    "advanced-graphs": "Advanced Graphs",
-    "dynamic-programming": "Dynamic Programming",
-    "2d-dynamic-programming": "2-D Dynamic Programming",
-    "greedy": "Greedy",
-    "intervals": "Intervals",
-    "math-and-geometry": "Math & Geometry",
-    "bit-manipulation": "Bit Manipulation",
-}
-
 CSES_CATEGORIES = [
     "Introductory Problems",
     "Sorting and Searching",
@@ -97,7 +75,6 @@ USACO_DIVISIONS = ["Bronze", "Silver", "Gold", "Platinum"]
 PLATFORMS = ["LeetCode", "Codeforces", "CSES", "USACO", "AtCoder"]
 # Order of the ### subsections within a platform's section.
 SECTION_ORDER = {
-    "LeetCode": list(TOPICS.values()),
     "CSES": CSES_CATEGORIES,
     "USACO": USACO_DIVISIONS,
 }
@@ -229,12 +206,8 @@ def first(pattern: str, text: str) -> str | None:
 
 
 def leetcode(ref: str, fields: dict[str, str]) -> Problem:
-    topic = fields.get("topic", "")
-    if topic not in TOPICS:
-        raise PromoteError(
-            f"LeetCode needs a NeetCode topic, not {topic!r}; use one of: "
-            + ", ".join(TOPICS)
-        )
+    if fields.get("topic"):
+        raise PromoteError("'topic:' isn't used for LeetCode; remove that line")
     slug_match = re.search(r"leetcode\.(?:com|cn)/problems/([a-z0-9-]+)", ref)
     number_text = next(
         (n for n in (fields.get("leetcode", ""), ref) if n.isdigit()), ""
@@ -289,8 +262,8 @@ def leetcode(ref: str, fields: dict[str, str]) -> Problem:
         raise PromoteError(f"slug {slug!r} should look like 'sum-of-left-leaves'")
     return Problem(
         platform="LeetCode",
-        section=TOPICS[topic],
-        folder=f"leetcode/{topic}",
+        section=None,
+        folder="leetcode",
         key=f"{number:04d}",
         name=slug.replace("-", "_"),
         title=title,

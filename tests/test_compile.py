@@ -1,8 +1,9 @@
 """Check that every C++ and Python solution compiles, unchanged, as its judge would.
 
-LeetCode C++ solutions are compiled with tests/cpp/leetcode.h force-included,
-since LeetCode provides the standard library and ListNode/TreeNode without any
-#include. Solutions from other judges are complete programs and compile alone.
+LeetCode and NeetCode C++ solutions are compiled with tests/cpp/leetcode.h
+force-included, since those judges provide the standard library and
+ListNode/TreeNode without any #include. Solutions from other judges are
+complete programs and compile alone.
 """
 
 import os
@@ -55,7 +56,7 @@ def _id(path):
 @pytest.mark.parametrize("path", CPP_SOLUTIONS, ids=_id)
 def test_cpp_solution_compiles(path):
     flags = ["-std=c++20", "-fsyntax-only", "-I", str(CPP_DIR / "include")]
-    if path.relative_to(SOLUTIONS_DIR).parts[0] == "leetcode":
+    if path.relative_to(SOLUTIONS_DIR).parts[0] in ("leetcode", "neetcode"):
         flags += ["-include", str(CPP_DIR / "leetcode.h")]
     result = subprocess.run(
         [CXX, *flags, str(path)], capture_output=True, text=True, check=False
