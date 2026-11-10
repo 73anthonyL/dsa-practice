@@ -1,10 +1,18 @@
+// problem: https://neetcode.io/problems/climbing-stairs/question?list=neetcode150
+// topic: dynamic programming
+// time: O(n)
+// space: O(1)
+// done
 class Solution {
 public:
     int climbStairs(int n) {
-        vector<int> dp(n + 1, 1);
+        int a, b;
+        a = b = 1;
         for (int i = 2; i <= n; i++) {
-            dp[i] = dp[i-1] + dp[i-2];
+            int curr = a + b;
+            swap(b, a);
+            swap(b, curr);
         }
-        return dp[n];
+        return b;
     }
 };
