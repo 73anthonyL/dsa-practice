@@ -52,6 +52,7 @@ Space complexity excludes the output. `h` is the height of the tree.
 
 | Problem | Solution | Time | Space |
 | --- | --- | --- | --- |
+| [Climbing Stairs](https://neetcode.io/problems/climbing-stairs/question?list=neetcode150) | [C++](solutions/neetcode/climbing_stairs.cpp) | `O(n)` | `O(1)` |
 | [Duplicate Integer](https://neetcode.io/problems/duplicate-integer/question?list=neetcode150) | [C++](solutions/neetcode/duplicate_integer.cpp) | `O(n)` | `O(n)` |
 
 ## Repository layout

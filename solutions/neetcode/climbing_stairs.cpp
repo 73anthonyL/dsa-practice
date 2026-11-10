@@ -1,8 +1,3 @@
-// problem: https://neetcode.io/problems/climbing-stairs/question?list=neetcode150
-// title: Climbing Stairs
-// time: O(n)
-// space: O(1)
-// done
 class Solution {
 public:
     int climbStairs(int n) {
