@@ -1,5 +1,5 @@
 // problem: https://neetcode.io/problems/climbing-stairs/question?list=neetcode150
-// topic: dynamic programming
+// title: Climbing Stairs
 // time: O(n)
 // space: O(1)
 // done
